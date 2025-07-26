@@ -15,7 +15,7 @@ let myobj = {
 let myArray = [1,2,3,4]
   return (
     <>
-      <h1 className='bg-green-300 text-black p-4 rounded-2xl'>telwind test</h1>
+      <h1 className='bg-green-300  text-black p-4 rounded-2xl'>telwind test</h1>
     <Card username="neon" someobj={myobj}/>
     <Card username="ashesh"/>
     </>
