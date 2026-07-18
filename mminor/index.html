@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>বাংলা OCR — Bengali Text Recognition System</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;600;700&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="index.css">
+
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">বা</div>
+    <div>
+      <div class="logo-text">BengaliOCR <span style="color:var(--accent)">Studio</span></div>
+      <div class="logo-sub">Bengali Text Recognition System</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span class="badge badge-demo">Demo Build</span>
+    <span class="badge badge-v2">v2.0</span>
+    <div class="model-chip"><span class="dot"></span> Engine Ready</div>
+    <button class="btn-icon" id="themeToggle" title="Toggle theme">🌙</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="app-container">
+
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('draw')">✏️ Handwriting</button>
+    <button class="tab-btn" onclick="switchTab('upload')">📷 Image Upload</button>
+    <button class="tab-btn" onclick="switchTab('pipeline')">⚙️ Pipeline</button>
+    <button class="tab-btn" onclick="switchTab('data')">📊 Dataset</button>
+  </div>
+
+  <!-- TAB: HANDWRITING -->
+  <div id="tab-draw" class="tab-content active">
+    <div class="panel-grid">
+      <!-- Left: Canvas -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>01</span> Handwriting Canvas</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="drawStatus" style="font-size:11px;color:var(--text3)">Ready</span>
+              <div class="model-chip"><span class="dot"></span> Online Mode</div>
+            </div>
+          </div>
+          <div class="card-body">
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+              <div class="tool-group">
+                <span class="tool-label">Color</span>
+                <div class="color-btn active" style="background:#1a1a2e" data-color="#1a1a2e" onclick="setColor(this,'#1a1a2e')"></div>
+                <div class="color-btn" style="background:#e8562a" data-color="#e8562a" onclick="setColor(this,'#e8562a')"></div>
+                <div class="color-btn" style="background:#2ec4b6" data-color="#2ec4b6" onclick="setColor(this,'#2ec4b6')"></div>
+                <div class="color-btn" style="background:#f0c040" data-color="#f0c040" onclick="setColor(this,'#f0c040')"></div>
+                <div class="color-btn" style="background:#6c5ce7" data-color="#6c5ce7" onclick="setColor(this,'#6c5ce7')"></div>
+              </div>
+              <div class="tool-group">
+                <span class="tool-label">Size</span>
+                <input type="range" id="penSize" min="1" max="20" value="3" oninput="setPenSize(this.value)">
+                <span id="penSizeVal" style="font-size:12px;color:var(--text2);min-width:20px">3px</span>
+              </div>
+              <div class="tool-group">
+                <button class="btn" onclick="undoStroke()">↩ Undo</button>
+                <button class="btn btn-danger" onclick="clearCanvas()">✕ Clear</button>
+              </div>
+              <div class="tool-group">
+                <button class="btn" onclick="exportStrokeJSON()">⬇ JSON</button>
+              </div>
+            </div>
+
+            <!-- Canvas -->
+            <canvas id="drawCanvas"></canvas>
+
+            <!-- Stats -->
+            <div class="stroke-info">
+              <div class="stroke-stat"><div class="num" id="strokeCount">0</div><div class="lbl">Strokes</div></div>
+              <div class="stroke-stat"><div class="num" id="pointCount">0</div><div class="lbl">Points</div></div>
+              <div class="stroke-stat"><div class="num" id="drawTime">0s</div><div class="lbl">Duration</div></div>
+              <div class="stroke-stat"><div class="num" id="avgVel">0</div><div class="lbl">Avg Velocity</div></div>
+            </div>
+
+            <!-- Run OCR -->
+            <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+              <button class="btn btn-primary" onclick="runHandwritingOCR()">▶ Run Bengali OCR</button>
+              <button class="btn" onclick="loadSampleStrokes()">🎲 Load Sample</button>
+              <span style="font-size:11px;color:var(--text3)">CNN+CTC / Bi-LSTM pipeline</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Stroke Visualization -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-header">
+            <div class="card-title"><span>02</span> Stroke Trajectory Viz</div>
+            <span style="font-size:11px;color:var(--text3)">Velocity heat-map</span>
+          </div>
+          <div class="card-body">
+            <canvas id="strokeVizCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Results -->
+      <div class="right-panel">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>03</span> OCR Output</div>
+            <span id="confBadge" style="font-size:11px;color:var(--text3)">—</span>
+          </div>
+          <div class="card-body">
+            <div id="ocrResult" class="result-area">
+              <div class="result-placeholder">
+                <span style="font-size:28px">✍️</span>
+                <span>Draw Bengali text above then run OCR</span>
+              </div>
+            </div>
+            <div class="confidence-bar"><div class="confidence-fill" id="confFill"></div></div>
+            <div class="confidence-label">
+              <span>Confidence</span>
+              <span id="confVal">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>04</span> Stroke Data (JSON)</div>
+            <button class="btn" style="font-size:11px;padding:4px 10px" onclick="toggleJSON()">Toggle</button>
+          </div>
+          <div class="card-body">
+            <pre id="jsonView" class="json-view"></pre>
+            <div id="jsonHidden" style="color:var(--text3);font-size:12px;padding:8px 0">Click Toggle to view raw stroke JSON</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>05</span> Recognition Stats</div>
+          </div>
+          <div class="card-body">
+            <div class="stats-grid">
+              <div class="stat-box"><div class="val" id="st-chars">—</div><div class="key">Characters</div></div>
+              <div class="stat-box"><div class="val" id="st-words">—</div><div class="key">Words</div></div>
+              <div class="stat-box"><div class="val" id="st-time">—</div><div class="key">Inf. Time</div></div>
+            </div>
+            <div class="export-group">
+              <button class="btn" onclick="exportTXT()">📄 Export TXT</button>
+              <button class="btn" onclick="exportJSON2()">📦 Export JSON</button>
+              <button class="btn" onclick="exportPNG()">🖼 Export PNG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: UPLOAD -->
+  <div id="tab-upload" class="tab-content">
+    <div class="panel-grid">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>01</span> Image Upload</div>
+            <div class="model-chip"><span class="dot"></span> Offline Mode</div>
+          </div>
+          <div class="card-body">
+
+            <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="dragOver(event)" ondrop="dropFile(event)" ondragleave="dragLeave(event)">
+              <span class="upload-icon">📁</span>
+              <div class="upload-text">Drop image here or click to browse</div>
+              <div class="upload-sub">Supports JPG, PNG, WEBP — Bengali handwritten or printed text</div>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(this)">
+
+            <div class="img-preview" id="imgPreview">
+              <div class="bbox-container">
+                <img id="uploadedImg" src="" alt="Uploaded image">
+                <canvas id="bboxCanvas" class="bbox-overlay"></canvas>
+              </div>
+            </div>
+
+            <div class="preprocess-steps" id="prepSteps">
+              <div class="step-badge pending" id="step-gray">⬜ Grayscale</div>
+              <div class="step-badge pending" id="step-bin">⬜ Binarize</div>
+              <div class="step-badge pending" id="step-noise">⬜ Denoise</div>
+              <div class="step-badge pending" id="step-skew">⬜ Deskew</div>
+              <div class="step-badge pending" id="step-detect">⬜ Detect Text</div>
+              <div class="step-badge pending" id="step-recog">⬜ Recognize</div>
+              <div class="step-badge pending" id="step-post">⬜ Post-process</div>
+            </div>
+
+            <div style="margin-top:14px;display:flex;gap:10px">
+              <button class="btn btn-primary" id="runImgOCR" onclick="runImageOCR()" disabled>▶ Run OCR</button>
+              <button class="btn" onclick="loadSampleImage()">🎲 Sample Image</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>02</span> OCR Output</div>
+          </div>
+          <div class="card-body">
+            <div id="imgOcrResult" class="result-area">
+              <div class="result-placeholder">
+                <span style="font-size:28px">📷</span>
+                <span>Upload a Bengali image to begin</span>
+              </div>
+            </div>
+            <div class="confidence-bar"><div class="confidence-fill" id="imgConfFill"></div></div>
+            <div class="confidence-label">
+              <span>Confidence</span><span id="imgConfVal">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>03</span> Detections</div>
+          </div>
+          <div class="card-body">
+            <div id="detectionList" style="font-size:12px;color:var(--text2);padding:8px 0">No detections yet.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>04</span> Export</div>
+          </div>
+          <div class="card-body">
+            <div class="export-group">
+              <button class="btn" onclick="exportImgTXT()">📄 TXT</button>
+              <button class="btn" onclick="exportImgJSON()">📦 JSON</button>
+              <button class="btn" onclick="exportImgPNG()">🖼 PNG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: PIPELINE -->
+  <div id="tab-pipeline" class="tab-content">
+    <div style="display:grid;gap:20px">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span>A</span> Offline OCR Pipeline (Image-based)</div>
+        </div>
+        <div class="card-body">
+          <div class="pipeline" id="offlinePipeline">
+            <div class="pipe-step" id="p1"><span class="pipe-icon">🖼</span>Input Image</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="p2"><span class="pipe-icon">⚙️</span>Preprocess</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="p3"><span class="pipe-icon">🔍</span>YOLOv11 Detect</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="p4"><span class="pipe-icon">🧠</span>CRNN Recognize</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="p5"><span class="pipe-icon">📝</span>Post-process</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="p6"><span class="pipe-icon">✅</span>Output</div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:14px" onclick="animatePipeline('offline')">▶ Animate Pipeline</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span>B</span> Online Handwriting Pipeline (Stroke-based)</div>
+        </div>
+        <div class="card-body">
+          <div class="pipeline" id="onlinePipeline">
+            <div class="pipe-step" id="q1"><span class="pipe-icon">✏️</span>Strokes</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="q2"><span class="pipe-icon">📐</span>Feature Ext.</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="q3"><span class="pipe-icon">🔄</span>Bi-LSTM/GRU</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="q4"><span class="pipe-icon">🔡</span>CTC Decode</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="q5"><span class="pipe-icon">🔤</span>Spell Check</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step" id="q6"><span class="pipe-icon">✅</span>Output</div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:14px" onclick="animatePipeline('online')">▶ Animate Pipeline</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><span>C</span> Model Architecture</div></div>
+          <div class="card-body" style="font-size:13px;line-height:1.8;color:var(--text2)">
+            <p style="color:var(--gold);font-weight:600;margin-bottom:8px">🔍 Detection: YOLOv11</p>
+            <p>• Input: 640×640 RGB</p>
+            <p>• Backbone: CSPDarknet</p>
+            <p>• Head: PANet + YOLO Head</p>
+            <p>• NMS threshold: 0.45</p>
+            <p>• Conf threshold: 0.25</p>
+            <br>
+            <p style="color:var(--teal);font-weight:600;margin-bottom:8px">🧠 Recognition: CRNN</p>
+            <p>• CNN: VGG-like (7 conv layers)</p>
+            <p>• RNN: 2-layer Bi-LSTM (256 units)</p>
+            <p>• Decoder: CTC Loss + Beam Search</p>
+            <p>• Vocab: 252 Bengali graphemes</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><span>D</span> Features Extracted</div></div>
+          <div class="card-body" style="font-size:13px;line-height:1.8;color:var(--text2)">
+            <p style="color:var(--accent2);font-weight:600;margin-bottom:8px">📐 Stroke Features</p>
+            <p>• Δx, Δy coordinates</p>
+            <p>• Timestamp delta</p>
+            <p>• Velocity (px/ms)</p>
+            <p>• Curvature angle</p>
+            <p>• Direction (8-way)</p>
+            <p>• Pen up/down flag</p>
+            <p>• Stroke length & duration</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: DATASET -->
+  <div id="tab-data" class="tab-content">
+    
+
+</div><!-- /app-container -->
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<script src="index.js"></script>
+</body>
+</html>
